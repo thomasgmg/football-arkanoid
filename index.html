@@ -1,0 +1,257 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Football Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #5e007f; /*Purple for the overall page background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .field {
+            background-color: green; /* Lighter green for the pitch background */
+            position: relative;
+        }
+        canvas {
+            border: 1px solid black;
+            display: block;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+        .scoreboard {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            color: white;
+            z-index: 2;
+        }
+        .timer {
+            position: absolute;
+            top: 50px;
+            right: 50px;
+            font-size: 24px;
+            color: white;
+            z-index: 2;
+        }
+    </style>
+</head>
+<body>
+
+<div class="field">
+    <canvas id="football-game" width="800" height="400"></canvas>
+</div>
+<div class="scoreboard" id="scoreboard">Goals Conceded: 0</div>
+<div class="timer" id="timer">Time: 02:00</div>
+
+<script>
+    // Get canvas element and context
+    const canvas = document.getElementById('football-game');
+    const ctx = canvas.getContext('2d');
+
+    // Ball object
+    let ball = {
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        radius: 10,
+        dx: 6, // Increased speed in the x direction
+        dy: 6 // Increased speed in the y direction
+    };
+
+    // Player object
+    const player = {
+        x: 100, // Adjusted x position to be in front of the left goal
+        y: canvas.height / 2 - 30, // Adjusted y position to be in front of the goal
+        width: 20,
+        height: 60,
+        speed: 10
+    };
+
+    // Left goal
+    const goalWidth = 40; // Adjusted goal width
+    const goalHeight = 250; // Adjusted goal height
+    const goalOffset = 0; // Adjusted goal offset to start from the left edge of the canvas
+    const leftGoalX = goalOffset;
+    const goalY = (canvas.height - goalHeight) / 2;
+
+    // Timer variables
+    let timeLeft = 120; // 2 minutes in seconds
+    const timerDisplay = document.getElementById('timer');
+
+    // Scoreboard
+    let goalsConceded = 0;
+    const scoreboard = document.getElementById('scoreboard');
+
+    // Draw ball function
+    function drawBall() {
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+        ctx.fillStyle = 'black';
+        ctx.fill();
+        ctx.closePath();
+    }
+
+    // Draw player function
+    function drawPlayer() {
+        ctx.fillStyle = 'blue';
+        ctx.fillRect(player.x, player.y, player.width, player.height);
+    }
+
+    // Draw left goal function
+    function drawLeftGoal() {
+        ctx.fillStyle = 'black';
+        ctx.fillRect(leftGoalX, goalY, goalWidth, goalHeight);
+    }
+
+    // Draw middle line function
+    function drawMiddleLine() {
+        ctx.beginPath();
+        ctx.moveTo(canvas.width / 2, 0);
+        ctx.lineTo(canvas.width / 2, canvas.height);
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.closePath();
+    }
+
+    // Draw center circle function
+    function drawCenterCircle() {
+        ctx.beginPath();
+        ctx.arc(canvas.width / 2, canvas.height / 2, 60, 0, Math.PI * 2);
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.closePath();
+    }
+
+    // Update function
+    function update() {
+        // Move ball
+        ball.x += ball.dx;
+        ball.y += ball.dy;
+
+        // Bounce off walls
+        if (ball.y + ball.dy > canvas.height - ball.radius || ball.y + ball.dy < ball.radius) {
+            ball.dy = -ball.dy;
+        }
+        if (ball.x + ball.dx > canvas.width - ball.radius || ball.x + ball.dx < ball.radius) {
+            ball.dx = -ball.dx;
+        }
+
+        // Check player collision
+        if (ball.x - ball.radius < player.x + player.width &&
+            ball.x + ball.radius > player.x &&
+            ball.y - ball.radius < player.y + player.height &&
+            ball.y + ball.radius > player.y) {
+            // Calculate collision angle
+            const collisionAngle = Math.atan2(ball.y - (player.y + player.height / 2), ball.x - (player.x + player.width / 2));
+
+            // Calculate new ball direction based on collision angle
+            const speed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
+            ball.dx = speed * Math.cos(collisionAngle);
+            ball.dy = speed * Math.sin(collisionAngle);
+        }
+
+        // Check left goal collision
+        if (ball.x - ball.radius < leftGoalX + goalWidth && ball.y > goalY && ball.y < goalY + goalHeight) {
+            // Goal scored
+            resetBall(); // Reset the ball position
+            goalsConceded++; // Increment goals conceded
+            updateScoreboard(); // Update scoreboard
+        }
+    }
+
+    // Function to update scoreboard
+    function updateScoreboard() {
+        scoreboard.textContent = `Goals Conceded: ${goalsConceded}`;
+
+        if (goalsConceded >= 7 || timeLeft <= 0) {
+            // Game over
+            clearInterval(timerInterval);
+            alert("Game Over!");
+            resetGame();
+        }
+    }
+
+    // Function to reset the ball position to a random location
+    function resetBall() {
+        ball = {
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            radius: 10,
+            dx: 6, // Increased speed in the x direction
+            dy: 6 // Increased speed in the y direction
+        };
+    }
+
+    // Function to reset the game
+    function resetGame() {
+        goalsConceded = 0;
+        timeLeft = 180;
+        updateScoreboard();
+        updateTimerDisplay();
+    }
+
+    // Function to update the timer display
+    function updateTimerDisplay() {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        timerDisplay.textContent = `Time: ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    // Update the timer display initially
+    updateTimerDisplay();
+
+    // Main loop
+    function gameLoop() {
+        update();
+        draw();
+        requestAnimationFrame(gameLoop);
+    }
+
+    // Start the game loop
+    gameLoop();
+
+    // Timer interval to update the timer display every second
+    const timerInterval = setInterval(function() {
+        timeLeft--;
+        updateTimerDisplay();
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            alert("Time's up! You won!");
+            resetGame();
+        }
+    }, 1000);
+
+    // Draw function
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBall();
+        drawPlayer();
+        drawLeftGoal();
+        drawMiddleLine(); // Add the middle line
+        drawCenterCircle(); // Add the center circle
+    }
+
+    // Event listener for player movement
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'k' && player.y > 0) {
+            player.y -= player.speed;
+        } else if (event.key === 'j' && player.y < canvas.height - player.height) {
+            player.y += player.speed;
+        }
+    });
+</script>
+
+</body>
+</html>
